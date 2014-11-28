@@ -12,6 +12,7 @@ import (
 
 var needSudo = false
 var TickInterval = 30 * time.Second
+var running = false
 
 func init() {
 	id := os.Geteuid()
@@ -19,6 +20,10 @@ func init() {
 }
 
 func Setup() (err error) {
+	if running {
+		return
+	}
+
 	err = SudoKeeper()
 	if err != nil {
 		return
@@ -35,6 +40,8 @@ func Setup() (err error) {
 		}
 	}()
 
+	running = true
+
 	return
 }
 
@@ -45,7 +52,7 @@ func SudoKeeper() (err error) {
 		return
 	}
 
-	log.Printf("sudo tick: %s", time.Now().Format("15:04:05"))
+	// log.Printf("sudo tick: %s", time.Now().Format("15:04:05"))
 	cmd := exec.Command("sudo", "-v")
 	err = cmd.Run()
 
@@ -65,14 +72,14 @@ func Sudoify(cmd *exec.Cmd) *exec.Cmd {
 
 	ncmd := *cmd
 
-	log.Printf("Old cmd: %#v", &ncmd)
+	// log.Printf("Old cmd: %#v", &ncmd)
 
 	// new arg[0] gets the sudo command.
 	// new arg[1] gets the sudo executable
 	// new arg[2] gets the original cmd.
 	// old arg[0] is discarded.
 
-	args := make([]string, len(cmd.Args) + 1)
+	args := make([]string, len(cmd.Args)+1)
 	args[0] = "sudo"
 	args[1] = cmd.Path
 	copy(args[2:], cmd.Args[1:])
@@ -82,6 +89,6 @@ func Sudoify(cmd *exec.Cmd) *exec.Cmd {
 	if err != nil {
 		log.Fatalf("Unable to find sudo command: %s", err)
 	}
-	log.Printf("Running: %#v", &ncmd)
+	// log.Printf("Running: %#v", &ncmd)
 	return &ncmd
 }
