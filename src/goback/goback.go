@@ -143,6 +143,17 @@ func (b *Backup) goSureOne(fs *FsInfo) (err error) {
 		return
 	}
 
+	// Remount it rw.
+	err = b.remount(smount, true)
+	if err != nil {
+		return
+	}
+
+	err = b.copyFile(path.Join(fs.Mount, "2sure.dat.gz"), b.snapName(fs))
+	if err != nil {
+		return
+	}
+
 	return
 }
 
@@ -183,6 +194,22 @@ func (b *Backup) mount(vol VgName, dest string, writable bool) (err error) {
 	flags = append(flags, dest)
 
 	cmd := exec.Command("mount", flags...)
+	cmd = sudo.Sudoify(cmd)
+	showCommand(cmd)
+	err = cmd.Run()
+	return
+}
+
+func (b *Backup) remount(dest string, writable bool) (err error) {
+	sudo.Setup()
+
+	flag := "ro"
+	if writable {
+		flag = "rw"
+	}
+	flag = "remount," + flag
+
+	cmd := exec.Command("mount", "-o", flag, dest)
 	cmd = sudo.Sudoify(cmd)
 	showCommand(cmd)
 	err = cmd.Run()
@@ -236,6 +263,16 @@ func (b *Backup) runGosure(fs *FsInfo) (err error) {
 
 	// TODO: Copy the 2sure.dat and .bak into the snapshot.
 
+	return
+}
+
+func (b *Backup) copyFile(from, to string) (err error) {
+	sudo.Setup()
+
+	cmd := exec.Command("cp", "-p", from, to)
+	cmd = sudo.Sudoify(cmd)
+	showCommand(cmd)
+	err = cmd.Run()
 	return
 }
 
