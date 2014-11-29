@@ -154,6 +154,18 @@ func (b *Backup) goSureOne(fs *FsInfo) (err error) {
 		return
 	}
 
+	backPath := path.Join(fs.Mount, "2sure.bak.gz")
+	exist, err := fileExists(backPath)
+	if err != nil {
+		return
+	}
+	if exist {
+		err = b.copyFile(backPath, b.snapName(fs))
+		if err != nil {
+			return
+		}
+	}
+
 	return
 }
 
@@ -321,4 +333,16 @@ func showCommand(cmd *exec.Cmd) {
 	if cmd.Dir != "" {
 		log.Printf("  in dir: %q", cmd.Dir)
 	}
+}
+
+func fileExists(path string) (exists bool, err error) {
+	_, err = os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+
+	return false, err
 }
