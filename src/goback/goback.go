@@ -54,6 +54,12 @@ func main() {
 	backup.namer = namer
 	backup.host = info
 	backup.lvm = lvm
+	backup.time = time.Now()
+
+	err = backup.LogRotate()
+	if err != nil {
+		log.Fatalf("Error rotating gosure log: %s", err)
+	}
 
 	err = backup.MakeSnap()
 	if err != nil {
@@ -71,10 +77,12 @@ func main() {
 var gosurePath = "/home/davidb/bin/gosure"
 
 type Backup struct {
-	conf  Config
-	namer *Namer
-	host  *Host
-	lvm   *LVInfo
+	conf    Config
+	namer   *Namer
+	host    *Host
+	lvm     *LVInfo
+	logFile *os.File
+	time    time.Time
 }
 
 func (b *Backup) MakeSnap() (err error) {
@@ -270,10 +278,20 @@ func (b *Backup) runGosure(fs *FsInfo) (err error) {
 	cmd.Dir = b.snapName(fs)
 	showCommand(cmd)
 	err = cmd.Run()
+	if err != nil {
+		return
+	}
 
-	// TODO: Run signoff and capture the output.
+	// Run signoff and capture the output.
+	b.message("sure of %s (%s) on %s", fs.Lvname, fs.Mount,
+		b.time.Format("2006-01-02 15:04"))
 
-	// TODO: Copy the 2sure.dat and .bak into the snapshot.
+	cmd = exec.Command(gosurePath, "-file", place, "signoff")
+	cmd = sudo.Sudoify(cmd)
+	cmd.Dir = b.snapName(fs)
+	cmd.Stdout = b.logFile
+	showCommand(cmd)
+	err = cmd.Run()
 
 	return
 }
@@ -286,6 +304,39 @@ func (b *Backup) copyFile(from, to string) (err error) {
 	showCommand(cmd)
 	err = cmd.Run()
 	return
+}
+
+func (b *Backup) LogRotate() (err error) {
+	lname := b.host.Surelog
+	bakname := lname + ".bak"
+
+	err = os.Remove(bakname)
+	if err != nil && !os.IsNotExist(err) {
+		return
+	}
+	err = nil
+
+	err = os.Rename(lname, bakname)
+	if err != nil && !os.IsNotExist(err) {
+		return
+	}
+
+	file, err := os.Create(lname)
+	if err != nil {
+		return
+	}
+
+	b.logFile = file
+
+	return
+}
+
+func (b *Backup) message(format string, a ...interface{}) {
+	text := fmt.Sprintf(format, a...)
+	hyphens := strings.Map(func(a rune) rune { return '-' }, text)
+	fmt.Fprintf(b.logFile, "%s\n", hyphens)
+	fmt.Fprintf(b.logFile, "%s\n", text)
+	fmt.Fprintf(b.logFile, "%s\n", hyphens)
 }
 
 // Backup date/time.

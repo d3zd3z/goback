@@ -24,6 +24,7 @@ type Host struct {
 	Host        string
 	Snapdir     string
 	Filesystems []*FsInfo
+	Surelog     string
 }
 
 type FsInfo struct {
