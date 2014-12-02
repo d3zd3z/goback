@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"os"
 	"time"
@@ -22,8 +23,14 @@ func main() {
 	}
 	log.Printf("Hostname: %q", host)
 
-	info, ok := conf[host]
-	if !ok {
+	var info *Host
+	for _, hi := range conf {
+		if hi.Host == host {
+			info = hi
+			break
+		}
+	}
+	if info == nil {
 		log.Fatalf("Host %q not found in config file", host)
 	}
 
@@ -49,21 +56,52 @@ func main() {
 	backup.lvm = lvm
 	backup.time = time.Now()
 
-	err = backup.LogRotate()
-	if err != nil {
-		log.Fatalf("Error rotating gosure log: %s", err)
+	// Get the command.
+	if len(os.Args) < 2 {
+		log.Fatalf("Usage: %s command", os.Args[0])
 	}
 
-	err = backup.MakeSnap()
+	cmd, ok := commands[os.Args[1]]
+	if !ok {
+		log.Fatalf("Unknown command: %q", os.Args[1])
+	}
+
+	err = cmd(&backup, os.Args[2:]...)
+	if err != nil {
+		log.Fatalf("Error running snapshot: %s", err)
+	}
+}
+
+type command func(*Backup, ...string) error
+
+var commands = map[string]command{
+	"snap": (*Backup).SnapCmd,
+}
+
+func (b *Backup) SnapCmd(args ...string) (err error) {
+
+	if len(args) != 0 {
+		err = errors.New("'snap' command not expecting additional arguments")
+		return
+	}
+
+	err = b.LogRotate()
+	if err != nil {
+		return
+	}
+
+	err = b.MakeSnap()
 	if err != nil {
 		// TODO: Undo the backup.
-		log.Fatalf("Error making snapshot: %s", err)
+		return
 	}
 
-	err = backup.GoSure()
+	err = b.GoSure()
 	if err != nil {
-		log.Fatalf("Error running gosure: %s", err)
+		return
 	}
+
+	return
 }
 
 // This probably should be in the config file.
