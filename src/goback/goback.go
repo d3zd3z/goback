@@ -76,6 +76,7 @@ type command func(*Backup, ...string) error
 
 var commands = map[string]command{
 	"snap": (*Backup).SnapCmd,
+	"push": (*Backup).PushCmd,
 }
 
 func (b *Backup) SnapCmd(args ...string) (err error) {
@@ -101,6 +102,34 @@ func (b *Backup) SnapCmd(args ...string) (err error) {
 		return
 	}
 
+	return
+}
+
+func (b *Backup) PushCmd(args ...string) (err error) {
+	if len(args) != 1 {
+		err = errors.New("'push' command expects one argument")
+		return
+	}
+
+	var info GeneralMirror
+	for _, m := range b.host.Mirrors {
+		if m["name"] == args[0] {
+			info = m
+			break
+		}
+	}
+
+	if info == nil {
+		err = errors.New("'push argument doesn't match a mirrors entry")
+		return
+	}
+
+	m, err := info.GetMirror()
+	if err != nil {
+		return
+	}
+
+	err = m.Push(b)
 	return
 }
 

@@ -27,6 +27,23 @@ func (vn *VgName) DevName() string {
 	return fmt.Sprintf("/dev/mapper/%s-%s", vn.VG, vn.LV)
 }
 
+type VgNameSlice []VgName
+
+func (p VgNameSlice) Len() int      { return len(p) }
+func (p VgNameSlice) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+
+func (p VgNameSlice) Less(i, j int) bool {
+	if p[i].VG < p[j].VG {
+		return true
+	}
+
+	if p[i].VG > p[j].VG {
+		return false
+	}
+
+	return p[i].LV < p[j].LV
+}
+
 // This should match the order of the lvs command used.
 type VolInfo struct {
 	LV       string `key:"LV"`

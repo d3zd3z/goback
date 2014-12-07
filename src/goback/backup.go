@@ -246,6 +246,20 @@ func (b *Backup) copyFile(from, to string) (err error) {
 	return
 }
 
+func (b *Backup) rsync(from, to string) (err error) {
+	sudo.Setup()
+
+	cmd := exec.Command("rsync", "-aXHi", "--delete", from, to)
+	cmd = sudo.Sudoify(cmd)
+
+	// TODO: Setup an rsync log as well.
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	showCommand(cmd)
+	err = cmd.Run()
+	return
+}
+
 func (b *Backup) LogRotate() (err error) {
 	lname := b.host.Surelog
 	bakname := lname + ".bak"
