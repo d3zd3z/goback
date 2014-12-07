@@ -147,7 +147,7 @@ func (b *Backup) mount(vol VgName, dest string, writable bool) (err error) {
 
 	flags := make([]string, 0, 4)
 
-	if writable {
+	if !writable {
 		flags = append(flags, "-r")
 	}
 	flags = append(flags, vol.DevName())
