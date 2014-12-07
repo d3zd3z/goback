@@ -35,6 +35,14 @@ func (m *lvmMirror) Push(b *Backup) (err error) {
 		if err != nil {
 			return
 		}
+
+		// Make a snapshot.  This needs to be done outside of
+		// the 'pushVol' function so that the volumes are
+		// cleanly unmounted before making the snapshot.
+		err = snapshot(base, dest)
+		if err != nil {
+			return
+		}
 	}
 
 	return nil
@@ -113,11 +121,6 @@ func (m *lvmMirror) pushVol(src, dest, base VgName) (err error) {
 	defer m.backup.umount(base)
 
 	err = m.backup.rsync("/mnt/old/.", "/mnt/new")
-	if err != nil {
-		return
-	}
-
-	err = snapshot(base, dest)
 	if err != nil {
 		return
 	}
