@@ -260,6 +260,19 @@ func (b *Backup) rsync(from, to string) (err error) {
 	return
 }
 
+func btrSnap(from, to string) (err error) {
+	sudo.Setup()
+
+	cmd := exec.Command("btrfs", "subvolume", "snapshot", "-r", from, to)
+	cmd = sudo.Sudoify(cmd)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	showCommand(cmd)
+	err = cmd.Run()
+	return
+}
+
 func (b *Backup) LogRotate() (err error) {
 	lname := b.host.Surelog
 	bakname := lname + ".bak"
@@ -291,6 +304,24 @@ func (b *Backup) message(format string, a ...interface{}) {
 	fmt.Fprintf(b.logFile, "%s\n", hyphens)
 	fmt.Fprintf(b.logFile, "%s\n", text)
 	fmt.Fprintf(b.logFile, "%s\n", hyphens)
+}
+
+// Return a list of all source volumes matching those specified in the
+// backup.
+func (b *Backup) GetSources() (src []VgName, err error) {
+	src = make([]VgName, 0)
+
+	for _, fs := range b.host.Filesystems {
+		re := fs.MatchRe()
+
+		for _, vol := range b.lvm.Volumes {
+			if vol.VG == fs.Volgroup && re.FindString(vol.LV) != "" {
+				src = append(src, vol.VgName())
+			}
+		}
+	}
+
+	return
 }
 
 func snapshot(base, snap VgName) (err error) {

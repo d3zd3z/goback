@@ -16,7 +16,7 @@ type lvmMirror struct {
 func (m *lvmMirror) Push(b *Backup) (err error) {
 	m.backup = b
 
-	src, err := m.scanSource()
+	src, err := m.backup.GetSources()
 	if err != nil {
 		return
 	}
@@ -46,24 +46,6 @@ func (m *lvmMirror) Push(b *Backup) (err error) {
 	}
 
 	return nil
-}
-
-// Scan the lvm volumes and return all that match one of our source
-// snapshots.
-func (m *lvmMirror) scanSource() (src []VgName, err error) {
-	src = make([]VgName, 0)
-
-	for _, fs := range m.backup.host.Filesystems {
-		re := fs.MatchRe()
-
-		for _, vol := range m.backup.lvm.Volumes {
-			if vol.VG == fs.Volgroup && re.FindString(vol.LV) != "" {
-				src = append(src, vol.VgName())
-			}
-		}
-	}
-
-	return
 }
 
 // Given a list of source volumes, remove all that are present in the

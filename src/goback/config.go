@@ -86,6 +86,14 @@ func (m GeneralMirror) GetMirror() (result Mirror, err error) {
 
 		return &lvmMirror{VgName: vgname, Prefix: prefix}, nil
 
+	case "btrfs":
+		prefix, ok := m["prefix"]
+		if !ok {
+			return nil, expecting(m["name"], "prefix")
+		}
+
+		return &btrMirror{Prefix: prefix}, nil
+
 	default:
 		msg := fmt.Sprintf("Unknown mirror style: %q", m["style"])
 		err = errors.New(msg)
