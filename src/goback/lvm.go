@@ -53,6 +53,7 @@ type VolInfo struct {
 	Pool     string `key:"Pool"`
 	Origin   string `key:"Origin"`
 	Dataused string `key:"Data%"`
+	Metaused string `key:"Meta%"`
 	Move     string `key:"Move"`
 	Log      string `key:"Log"`
 	Cpysync  string `key:"Cpy%Sync"`
@@ -121,6 +122,8 @@ func getInfoType() reflect.Type {
 	return ti.Elem()
 }
 
+// TODO: Allow more mismatches in this to account for changes across
+// versions of LVM.
 func checkHeader(fields []string, t reflect.Type) (err error) {
 	if len(fields) != t.NumField() {
 		err = errors.New(fmt.Sprintf("Field count mismatch in VolInfo(%d) and Lvm(%d)",
